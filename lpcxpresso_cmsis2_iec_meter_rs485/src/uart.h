@@ -64,6 +64,7 @@ void UARTSendNumber( uint8_t portNum, uint32_t value);
 void UARTSendNumberln( uint8_t portNum, uint32_t value);
 void UARTSendCRLF( uint8_t portNum);
 uint8_t UARTTXReady(uint8_t portNum);
+void UARTUpdateMsTicks(uint32_t value);
 
 #endif /* end __UART_H */
 /*****************************************************************************

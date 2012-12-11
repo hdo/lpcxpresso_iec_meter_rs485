@@ -38,7 +38,9 @@
 volatile uint32_t UART0Status, UART1Status, UART2Status, UART3Status;
 volatile uint8_t UART0TxEmpty = 1, UART1TxEmpty = 1, UART2TxEmpty = 1, UART3TxEmpty=1;
 volatile uint8_t UART0Buffer[BUFSIZE], UART1Buffer[BUFSIZE], UART2Buffer[BUFSIZE], UART3Buffer[BUFSIZE];
-volatile uint32_t UART0Count = 0, UART1Count = 0, UART2Count = 0, UART3Count = 0;
+volatile uint8_t UART0Count = 0, UART1Count = 0, UART2Count = 0, UART3Count = 0;
+volatile uint32_t UART1LastReceived = 0;
+volatile uint32_t UARTMsTicks = 0;
 
 /*****************************************************************************
 ** Function name:		UART0_IRQHandler
@@ -149,6 +151,7 @@ void UART1_IRQHandler (void)
 	{
 	  /* If no error on RLS, normal ready, save into the data buffer. */
 	  /* Note: read RBR will clear the interrupt */
+      UART1LastReceived = UARTMsTicks;
 	  UART1Buffer[UART1Count] = LPC_UART1->RBR;
 	  UART1Count++;
 	  if ( UART1Count == BUFSIZE )
@@ -160,6 +163,7 @@ void UART1_IRQHandler (void)
   else if ( IIRValue == IIR_RDA )	/* Receive Data Available */
   {
 	/* Receive Data Available */
+    UART1LastReceived = UARTMsTicks;
 	UART1Buffer[UART1Count] = LPC_UART1->RBR;
 	UART1Count++;
 	if ( UART1Count == BUFSIZE )
@@ -685,6 +689,10 @@ uint8_t UARTTXReady(uint8_t portNum){
 		return UART3TxEmpty;
 	}
 	return 0;
+}
+
+void UARTUpdateMsTicks(uint32_t value) {
+	UARTMsTicks = value;
 }
 /******************************************************************************
 **                            End Of File
