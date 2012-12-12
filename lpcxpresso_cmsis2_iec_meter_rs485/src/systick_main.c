@@ -18,7 +18,7 @@ __CRP const unsigned int CRP_WORD = CRP_NO_CRP ;
 
 volatile uint32_t msTicks; // counter for 1ms SysTicks
 extern volatile unsigned int eint3_count;
-extern volatile uint32_t UART0Count, UART1Count, UART2Count, UART3Count, UART0TxEmpty, UART1TxEmpty, UART2TxEmpty;
+extern volatile uint8_t UART0Count, UART1Count, UART2Count, UART3Count, UART0TxEmpty, UART1TxEmpty, UART2TxEmpty;
 extern volatile uint8_t UART0Buffer[BUFSIZE], UART1Buffer[BUFSIZE], UART2Buffer[BUFSIZE];
 extern volatile uint32_t UART1LastReceived;
 

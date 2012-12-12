@@ -39,6 +39,7 @@ volatile uint32_t UART0Status, UART1Status, UART2Status, UART3Status;
 volatile uint8_t UART0TxEmpty = 1, UART1TxEmpty = 1, UART2TxEmpty = 1, UART3TxEmpty=1;
 volatile uint8_t UART0Buffer[BUFSIZE], UART1Buffer[BUFSIZE], UART2Buffer[BUFSIZE], UART3Buffer[BUFSIZE];
 volatile uint8_t UART0Count = 0, UART1Count = 0, UART2Count = 0, UART3Count = 0;
+
 volatile uint32_t UART1LastReceived = 0;
 volatile uint32_t UARTMsTicks = 0;
 

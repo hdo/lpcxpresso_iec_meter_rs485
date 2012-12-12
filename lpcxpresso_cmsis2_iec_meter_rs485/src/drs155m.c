@@ -5,7 +5,7 @@
 #include "queue.h"
 #include "logger.h"
 
-extern volatile uint32_t UART1Count, UART1TxEmpty;
+extern volatile uint8_t UART1Count, UART1TxEmpty;
 extern volatile uint8_t UART1Buffer[BUFSIZE];
 extern volatile uint32_t UART1LastReceived;
 
@@ -204,7 +204,6 @@ void iec_send_exit() {
 	iec_flag_data_available = 0;
 	iec_flag_error = 0;
 	iec_flag_reading = 0;
-	iec_flag_expect_response = 0;
 	iec_send(message_exit, 0);
 	iec_connect_status = CON_STAT_DISCONNECTED;
 	iec_current_state = STATE_DISCONNECTED;
@@ -340,8 +339,11 @@ void process_iec(uint32_t ms_ticks) {
 			// if last byte is added to FIFO  reset timer for time out
 			UART1LastReceived = ms_ticks;
 			iec_flag_reading = 1;
+			UART1Count = 0;
+
 			logger_logStringln("set iec_flag_reading=1");
 			logger_logNumberln(ms_ticks);
+			logger_logNumberln(UART1LastReceived);
 		}
 	}
 
@@ -360,7 +362,6 @@ void process_iec(uint32_t ms_ticks) {
 			// clear RX buffer
 			UART1Count = 0;
 		}
-	    /*
 		else if (math_calc_diff(ms_ticks, UART1LastReceived) > 50 && UART1Count > 0) {
 			// 500ms time out
 
@@ -370,6 +371,7 @@ void process_iec(uint32_t ms_ticks) {
 			LPC_UART1->IER = IER_THRE | IER_RLS;
 
 			// log incoming data
+			log_incomming_data();
 
 
 			switch(iec_current_state) {
@@ -385,6 +387,6 @@ void process_iec(uint32_t ms_ticks) {
 
 			// re-enable RBR
 			LPC_UART1->IER = IER_THRE | IER_RLS | IER_RBR;
-		}*/
+		}
 	}
 }
