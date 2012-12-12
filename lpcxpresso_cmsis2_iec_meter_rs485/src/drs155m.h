@@ -30,4 +30,17 @@
 #define CON_STAT_CONNECTED 3
 #define CON_STAT_DISCONNECTED 4
 
+
+
+void iec_init();
+void process_iec(uint32_t ms_ticks);
+uint8_t iec_is_data_available();
+uint8_t iec_is_ready();
+uint8_t iec_is_error_occured();
+uint8_t iec_get_connect_status();
+char* iec_read_data_as_string();
+uint32_t iec_read_data_as_int();
+
+
+
 #endif /*DRS155M_H_*/

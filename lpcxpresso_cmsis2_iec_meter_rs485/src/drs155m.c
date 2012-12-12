@@ -20,6 +20,7 @@ char message_read[] = {DATA_SOH, 'R', '1', DATA_STX, '%', '(', ')', DATA_ETX, 0}
 // [SOH]B0[ETX][BCC 0x71]
 char message_exit[] = {DATA_SOH, 'B', '0', DATA_ETX, 0};
 
+uint8_t hex_data[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
 uint8_t rs485out_buffer_data[RS485_OUTPUT_BUFFER_SIZE];
 ringbuffer_t rs485out_rbuffer = {.buffer=rs485out_buffer_data, .head=0, .tail=0, .count=0, .size=RS485_OUTPUT_BUFFER_SIZE};
@@ -29,6 +30,9 @@ uint8_t iec_flag_data_available = 0;
 uint8_t iec_flag_ready = 0;
 uint8_t iec_flag_error = 0;
 uint8_t iec_flag_reading = 0;
+
+uint8_t logging_bcc_out = 0;
+uint8_t logging_bcc_in = 0;
 
 uint8_t iec_read_address = 0;
 char  read_address_string[9] = {0};
@@ -79,6 +83,54 @@ void set_address_string(uint8_t address) {
 		}
 		else {
 			read_address_string[index] = '0';
+		}
+	}
+}
+
+void log_incomming_data(uint8_t data) {
+	if (logging_bcc_in) {
+		logging_bcc_in = 0;
+		uint8_t i1 = data & 0xF;
+		uint8_t i2 = data >> 4;
+		logger_logString("{BCC 0x");
+		logger_logByte(hex_data[i2]);
+		logger_logByte(hex_data[i1]);
+		logger_logStringln("}");
+	}
+	else {
+		switch(data) {
+		case 0x01 : logger_logString("{SOH}"); break;
+		case 0x02 : logger_logString("{STX}"); break;
+		case 0x03 : logger_logString("{ETX}"); logging_bcc_in = 1; break;
+		case 0x04 : logger_logString("{EOT}"); logging_bcc_in = 1; break;
+		case 0x06 : logger_logString("{ACK}"); break;
+		case 0x15 : logger_logString("{NAK}"); break;
+		default:
+			logger_logByte(data);
+		}
+	}
+}
+
+void log_outgoing_data(uint8_t data) {
+	if (logging_bcc_out) {
+		logging_bcc_out = 0;
+		uint8_t i1 = data & 0xF;
+		uint8_t i2 = data >> 4;
+		logger_logString("[BCC 0x");
+		logger_logByte(hex_data[i2]);
+		logger_logByte(hex_data[i1]);
+		logger_logStringln("]");
+	}
+	else {
+		switch(data) {
+		case 0x01 : logger_logString("[SOH]"); break;
+		case 0x02 : logger_logString("[STX]"); break;
+		case 0x03 : logger_logString("[ETX]"); logging_bcc_out = 1; break;
+		case 0x04 : logger_logString("[EOT]"); logging_bcc_out = 1; break;
+		case 0x06 : logger_logString("[ACK]"); break;
+		case 0x15 : logger_logString("[NAK]"); break;
+		default:
+			logger_logByte(data);
 		}
 	}
 }
@@ -247,9 +299,13 @@ void process_iec(uint32_t ms_ticks) {
 
 	if (queue_dataAvailable(&rs485out_rbuffer) && UARTTXReady(1)) {
 		uint8_t index;
+		uint8_t data;
 		// fill transmit FIFO with 14 bytes
 		for(index = 0; index < 14 && queue_dataAvailable(&rs485out_rbuffer); index++) {
-			UARTSendByte(1, queue_read(&rs485out_rbuffer));
+			data = queue_read(&rs485out_rbuffer);
+			UARTSendByte(1, data);
+
+			log_outgoing_data(data);
 		}
 		if (queue_isEmpty(&rs485out_rbuffer)) {
 			// if last byte is added to FIFO  reset timer for time out
@@ -273,10 +329,16 @@ void process_iec(uint32_t ms_ticks) {
 		else if (math_calc_diff(ms_ticks, UART1LastReceived) > 50 && UART1Count > 0) {
 			// 500ms time out
 
+			iec_flag_reading = 0;
+
 			// disable RBR
 			LPC_UART1->IER = IER_THRE | IER_RLS;
 
-			iec_flag_reading = 0;
+			// log incoming data
+			uint8_t i;
+			for (i = 0; i < UART1Count; i++) {
+				log_incomming_data(UART1Buffer[i]);
+			}
 
 			switch(iec_current_state) {
 			case STATE_WAIT_IDENTIFICATION : iec_prepare_send_mode(); break;
