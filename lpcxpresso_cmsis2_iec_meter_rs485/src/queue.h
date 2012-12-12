@@ -17,6 +17,7 @@ uint8_t queue_isFull(ringbuffer_t *rbuffer);
 uint8_t queue_read(ringbuffer_t *rbuffer);
 uint8_t queue_dataAvailable(ringbuffer_t *rbuffer);
 uint8_t queue_count(ringbuffer_t *rbuffer);
+uint8_t queue_peek(ringbuffer_t *rbuffer, uint8_t index);
 
 
 #endif /* end __QUEUE_H */

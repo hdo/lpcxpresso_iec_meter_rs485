@@ -40,3 +40,14 @@ uint8_t queue_dataAvailable(ringbuffer_t *rbuffer) {
 uint8_t queue_count(ringbuffer_t *rbuffer) {
 	return rbuffer->count;
 }
+
+uint8_t queue_peek(ringbuffer_t *rbuffer, uint8_t index) {
+	if (rbuffer->count > index) {
+		index += rbuffer->head;
+		index %= rbuffer->size;
+		uint8_t data = rbuffer->buffer[index];
+		return data;
+	}
+	return 0;
+}
+
