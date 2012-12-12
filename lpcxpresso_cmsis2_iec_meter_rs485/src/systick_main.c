@@ -12,6 +12,7 @@ __CRP const unsigned int CRP_WORD = CRP_NO_CRP ;
 #include "leds.h"
 #include "uart.h"
 #include "logger.h"
+#include "console_out.h"
 #include "s0_input.h"
 #include "drs155m.h"
 
@@ -66,17 +67,20 @@ int main(void) {
 	UARTSendStringln(0, "UART2 online ...");
 
 
-	//EINT3_enable();
+	logger_setEnabled(1);
 	logger_logStringln("logger online ...");
 	led_off(7);
 
+	uint8_t iCounter;
 
 	while(1) {
 
 		/* process logger */
-		if (logger_dataAvailable() && UARTTXReady(0)) {
-			uint8_t data = logger_read();
-			UARTSendByte(0,data);
+		if (console_out_dataAvailable() && UARTTXReady(0)) {
+			// fill transmit FIFO with 14 bytes
+			for(iCounter = 0; iCounter < 14 && console_out_dataAvailable(); iCounter++) {
+				UARTSendByte(0, console_out_read());
+			}
 		}
 
 		process_leds(msTicks);
