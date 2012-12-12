@@ -30,6 +30,7 @@ uint8_t iec_flag_data_available = 0;
 uint8_t iec_flag_ready = 0;
 uint8_t iec_flag_error = 0;
 uint8_t iec_flag_reading = 0;
+uint8_t iec_flag_expect_response = 0;
 
 uint8_t logging_bcc_out = 0;
 uint8_t logging_bcc_in = 0;
@@ -87,62 +88,87 @@ void set_address_string(uint8_t address) {
 	}
 }
 
-void log_incomming_data(uint8_t data) {
-	if (logging_bcc_in) {
-		logging_bcc_in = 0;
+
+void log_iec_data(uint8_t data, uint8_t is_out, uint8_t is_bcc) {
+	uint8_t p_o = '[';
+	uint8_t p_c = ']';
+
+	if (!is_out) {
+		p_o = '{';
+		p_c = '}';
+	}
+
+	if (is_bcc) {
 		uint8_t i1 = data & 0xF;
 		uint8_t i2 = data >> 4;
-		logger_logString("{BCC 0x");
+		logger_logByte(p_o);
+		logger_logString("BCC 0x");
 		logger_logByte(hex_data[i2]);
 		logger_logByte(hex_data[i1]);
-		logger_logStringln("}");
+		logger_logByte(p_c);
+		logger_logCRLF();
 	}
 	else {
 		switch(data) {
-		case 0x01 : logger_logString("{SOH}"); break;
-		case 0x02 : logger_logString("{STX}"); break;
-		case 0x03 : logger_logString("{ETX}"); logging_bcc_in = 1; break;
-		case 0x04 : logger_logString("{EOT}"); logging_bcc_in = 1; break;
-		case 0x06 : logger_logString("{ACK}"); break;
-		case 0x15 : logger_logString("{NAK}"); break;
+		case 0x01 : logger_logByte(p_o); logger_logString("SOH"); logger_logByte(p_c); break;
+		case 0x02 : logger_logByte(p_o); logger_logString("STX"); logger_logByte(p_c); break;
+		case 0x03 : logger_logByte(p_o); logger_logString("ETX"); logger_logByte(p_c); break;
+		case 0x04 : logger_logByte(p_o); logger_logString("EOT"); logger_logByte(p_c); break;
+		case 0x06 : logger_logByte(p_o); logger_logString("ACK"); logger_logByte(p_c); break;
+		case 0x15 : logger_logByte(p_o); logger_logString("NAK"); logger_logByte(p_c); break;
 		default:
 			logger_logByte(data);
 		}
 	}
 }
 
-void log_outgoing_data(uint8_t data) {
-	if (logging_bcc_out) {
-		logging_bcc_out = 0;
-		uint8_t i1 = data & 0xF;
-		uint8_t i2 = data >> 4;
-		logger_logString("[BCC 0x");
-		logger_logByte(hex_data[i2]);
-		logger_logByte(hex_data[i1]);
-		logger_logStringln("]");
-	}
-	else {
-		switch(data) {
-		case 0x01 : logger_logString("[SOH]"); break;
-		case 0x02 : logger_logString("[STX]"); break;
-		case 0x03 : logger_logString("[ETX]"); logging_bcc_out = 1; break;
-		case 0x04 : logger_logString("[EOT]"); logging_bcc_out = 1; break;
-		case 0x06 : logger_logString("[ACK]"); break;
-		case 0x15 : logger_logString("[NAK]"); break;
-		default:
-			logger_logByte(data);
+void log_incomming_data() {
+	if (UART1Count > 1) {
+		uint8_t i;
+		uint8_t has_bcc = UART1Buffer[UART1Count-2] == DATA_ETX || UART1Buffer[UART1Count-2] == DATA_EOT;
+		for(i=0; i < UART1Count; i++) {
+			uint8_t data = UART1Buffer[i];
+			if (has_bcc && i == (UART1Count - 1)) {
+				log_iec_data(data, 0, 1);
+			}
+			else {
+				log_iec_data(data, 0, 0);
+			}
 		}
 	}
+	logger_logCRLF();
 }
 
-void iec_send(char* data) {
+
+void log_outgoing_data() {
+	uint8_t count = queue_count(&rs485out_rbuffer);
+	if (count > 1) {
+		uint8_t i;
+		uint8_t has_bcc = queue_peek(&rs485out_rbuffer, count-2) == DATA_ETX || queue_peek(&rs485out_rbuffer, count-2) == DATA_EOT;
+		for(i=0; i < count; i++) {
+			uint8_t data = queue_peek(&rs485out_rbuffer, i);
+			if (has_bcc && i == (count - 1)) {
+				log_iec_data(data, 1, 1);
+			}
+			else {
+				log_iec_data(data, 1, 0);
+			}
+		}
+	}
+	logger_logCRLF();
+}
+
+void iec_send(char* data, uint8_t expect_response) {
+	iec_flag_expect_response = expect_response;
 	queue_reset(&rs485out_rbuffer);
 	while (*data) {
 		queue_put(&rs485out_rbuffer, *data++);
 	}
+	log_outgoing_data();
 }
 
-void iec_send_with_parameter(char* data, char* param) {
+void iec_send_with_parameter(char* data, char* param, uint8_t expect_response) {
+	iec_flag_expect_response = expect_response;
 	// also send BCC
 	queue_reset(&rs485out_rbuffer);
 	uint8_t ch1, ch2, bcc = 0, start_bcc = 0;
@@ -170,13 +196,16 @@ void iec_send_with_parameter(char* data, char* param) {
 	}
 	// send BCC
 	queue_put(&rs485out_rbuffer, bcc);
+	log_outgoing_data();
 }
 
 void iec_send_exit() {
 	iec_flag_ready = 0;
 	iec_flag_data_available = 0;
 	iec_flag_error = 0;
-	iec_send(message_exit);
+	iec_flag_reading = 0;
+	iec_flag_expect_response = 0;
+	iec_send(message_exit, 0);
 	iec_connect_status = CON_STAT_DISCONNECTED;
 	iec_current_state = STATE_DISCONNECTED;
 }
@@ -184,9 +213,10 @@ void iec_send_exit() {
 void iec_connect(char* meter_id) {
 	if (iec_connect_status == CON_STAT_DISCONNECTED) {
 		// send start
-		iec_send_with_parameter(message_start, meter_id);
+		iec_send_with_parameter(message_start, meter_id, 1);
 		iec_current_state = STATE_WAIT_IDENTIFICATION;
 		iec_connect_status = CON_STAT_CONNECTING;
+		logger_logStringln("done sending start command");
 	}
 }
 
@@ -203,7 +233,7 @@ void iec_request_data_at_address(uint8_t address) {
 		iec_flag_error = 0;
 		iec_read_address = address;
 		set_address_string(address);
-		iec_send_with_parameter(message_read, read_address_string);
+		iec_send_with_parameter(message_read, read_address_string, 1);
 		iec_current_state = STATE_WAIT_DATA_READ;
 	}
 }
@@ -219,7 +249,7 @@ void iec_prepare_send_mode() {
 			UART1Buffer[2] == 'T' &&
 			UART1Buffer[3] == 'L') {
 
-		iec_send(message_mode);
+		iec_send(message_mode, 1);
 		iec_current_state = STATE_WAIT_PASSWORD_PROMPT;
 		iec_connect_status = CON_STAT_CONNECTED;
 	}
@@ -237,7 +267,7 @@ void iec_prepare_send_password() {
 			)
 	{
 		// send password command
-		iec_send_with_parameter(message_login, DRS155M_DEFAULT_PASSWORD);
+		iec_send_with_parameter(message_login, DRS155M_DEFAULT_PASSWORD, 1);
 		iec_current_state = STATE_WAIT_PASSWORD_VERIFICATION;
 	}
 	else {
@@ -304,18 +334,22 @@ void process_iec(uint32_t ms_ticks) {
 		for(index = 0; index < 14 && queue_dataAvailable(&rs485out_rbuffer); index++) {
 			data = queue_read(&rs485out_rbuffer);
 			UARTSendByte(1, data);
-
-			log_outgoing_data(data);
 		}
-		if (queue_isEmpty(&rs485out_rbuffer)) {
+		if (queue_isEmpty(&rs485out_rbuffer) && iec_flag_expect_response) {
+			iec_flag_expect_response = 0;
 			// if last byte is added to FIFO  reset timer for time out
 			UART1LastReceived = ms_ticks;
 			iec_flag_reading = 1;
+			logger_logStringln("set iec_flag_reading=1");
+			logger_logNumberln(ms_ticks);
 		}
 	}
 
 	if (iec_flag_reading) {
-	    if (math_calc_diff(ms_ticks, UART1LastReceived) > 150) {
+	    if (math_calc_diff(ms_ticks, UART1LastReceived) > 300) {
+	    	logger_logStringln("entering time out");
+	    	logger_logNumberln(UART1LastReceived);
+	    	logger_logNumberln(ms_ticks);
 			// 1500ms time out
 			// send exit message
 	    	iec_send_exit();
@@ -326,6 +360,7 @@ void process_iec(uint32_t ms_ticks) {
 			// clear RX buffer
 			UART1Count = 0;
 		}
+	    /*
 		else if (math_calc_diff(ms_ticks, UART1LastReceived) > 50 && UART1Count > 0) {
 			// 500ms time out
 
@@ -335,10 +370,7 @@ void process_iec(uint32_t ms_ticks) {
 			LPC_UART1->IER = IER_THRE | IER_RLS;
 
 			// log incoming data
-			uint8_t i;
-			for (i = 0; i < UART1Count; i++) {
-				log_incomming_data(UART1Buffer[i]);
-			}
+
 
 			switch(iec_current_state) {
 			case STATE_WAIT_IDENTIFICATION : iec_prepare_send_mode(); break;
@@ -353,6 +385,6 @@ void process_iec(uint32_t ms_ticks) {
 
 			// re-enable RBR
 			LPC_UART1->IER = IER_THRE | IER_RLS | IER_RBR;
-		}
+		}*/
 	}
 }
