@@ -66,6 +66,7 @@ int main(void) {
 	UARTSendCRLF(0);
 	UARTSendStringln(0, "UART2 online ...");
 
+	iec_init();
 
 	logger_setEnabled(1);
 	logger_logStringln("logger online ...");
@@ -94,6 +95,9 @@ int main(void) {
 			logger_logString("s0_0:");
 			logger_logNumberln(triggerValue);
 			led_signal(1, 30, msTicks);
+			if (iec_get_connect_status() == CON_STAT_DISCONNECTED) {
+				iec_connect("001511420144");
+			}
 		}
 
 		triggerValue = s0_triggered(1);
