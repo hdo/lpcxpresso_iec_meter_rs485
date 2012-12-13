@@ -395,7 +395,7 @@ void process_iec(uint32_t ms_ticks) {
 			// clear RX buffer
 			UART1Count = 0;
 		}
-		else if (math_calc_diff(ms_ticks, UART1LastReceived) > 100 && UART1Count > 0) {
+		else if (math_calc_diff(ms_ticks, UART1LastReceived) > 10 && UART1Count > 0) {
 			// 500ms time out
 
 			iec_flag_reading = 0;

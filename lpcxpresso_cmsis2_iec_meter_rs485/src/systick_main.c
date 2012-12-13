@@ -106,25 +106,32 @@ int main(void) {
 
 			if (iec_get_connect_status() == CON_STAT_CONNECTED) {
 				logger_logStringln("connected!");
+			}
 
-				if (iec_is_ready()) {
-					if (current_data_request_index < 8) {
-						iec_request_data_at_address(request_data_table[current_data_request_index++]);
-					}
+		}
+
+
+		if (iec_get_connect_status() == CON_STAT_CONNECTED) {
+			if (iec_is_ready()) {
+				if (current_data_request_index < 8) {
+					iec_request_data_at_address(request_data_table[current_data_request_index++]);
 				}
-
-				if (iec_is_data_available()) {
-					logger_logString("data at address: ");
-					logger_logNumberln(iec_get_current_address());
-					uint32_t data = iec_get_data_as_int();
-					logger_logString("data as int: ");
-					logger_logNumberln(data);
-					logger_logString("data as string: ");
-					logger_logStringln(iec_get_data_as_string());
-					iec_clear_data();
+				else {
+					iec_disconnect();
+					current_data_request_index = 0;
 				}
 			}
 
+			if (iec_is_data_available()) {
+				logger_logString("data at address: ");
+				logger_logNumberln(iec_get_current_address());
+				uint32_t data = iec_get_data_as_int();
+				logger_logString("data as int: ");
+				logger_logNumberln(data);
+				logger_logString("data as string: ");
+				logger_logStringln(iec_get_data_as_string());
+				iec_clear_data();
+			}
 		}
 
 
