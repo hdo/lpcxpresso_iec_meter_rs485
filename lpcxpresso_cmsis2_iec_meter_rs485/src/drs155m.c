@@ -36,7 +36,7 @@ uint8_t logging_bcc_out = 0;
 uint8_t logging_bcc_in = 0;
 
 uint8_t iec_read_address = 0;
-char  read_address_string[9] = {0};
+char read_address_string[10];
 uint8_t iec_current_state = 0;
 char* iec_current_meter_id = "";
 uint8_t iec_received_data[DRS155M_MAX_RECEIVE_DATA_LENGTH];
@@ -75,17 +75,30 @@ uint32_t iec_read_data_as_int() {
 }
 
 void set_address_string(uint8_t address) {
-	read_address_string[8] = 0; // null termination
-	uint8_t index = 7;
-	for(; index >= 0; index--) {
+	uint8_t index;
+	// init string
+	for(index = 0; index < 10; index++) {
+		read_address_string[index] = 0;
+	}
+	read_address_string[0] = '0' ;
+	read_address_string[1] = '0' ;
+	read_address_string[2] = '0' ;
+	read_address_string[3] = '0' ;
+	read_address_string[4] = '0' ;
+	read_address_string[5] = '0' ;
+	read_address_string[6] = '0' ;
+	read_address_string[7] = '0' ;
+	/*
+	for(index = 7; index >= 0; index--) {
 		if (address > 0) {
-			read_address_string[index] = address % 10 + '0';
+			read_address_string[index] = (address % 10) + '0';
 			address /= 10;
 		}
 		else {
 			read_address_string[index] = '0';
 		}
 	}
+	*/
 }
 
 
@@ -123,17 +136,19 @@ void log_iec_data(uint8_t data, uint8_t is_out, uint8_t is_bcc) {
 }
 
 void log_incomming_data() {
+	logger_logStringln("<<<");
+	uint8_t has_bcc = 0;
 	if (UART1Count > 1) {
-		uint8_t i;
-		uint8_t has_bcc = UART1Buffer[UART1Count-2] == DATA_ETX || UART1Buffer[UART1Count-2] == DATA_EOT;
-		for(i=0; i < UART1Count; i++) {
-			uint8_t data = UART1Buffer[i];
-			if (has_bcc && i == (UART1Count - 1)) {
-				log_iec_data(data, 0, 1);
-			}
-			else {
-				log_iec_data(data, 0, 0);
-			}
+		has_bcc = UART1Buffer[UART1Count-2] == DATA_ETX || UART1Buffer[UART1Count-2] == DATA_EOT;
+	}
+	uint8_t i;
+	for(i=0; i < UART1Count; i++) {
+		uint8_t data = UART1Buffer[i];
+		if (has_bcc && i == (UART1Count - 1)) {
+			log_iec_data(data, 0, 1);
+		}
+		else {
+			log_iec_data(data, 0, 0);
 		}
 	}
 	logger_logCRLF();
@@ -141,18 +156,22 @@ void log_incomming_data() {
 
 
 void log_outgoing_data() {
+	logger_logStringln(">>>");
+
 	uint8_t count = queue_count(&rs485out_rbuffer);
-	if (count > 1) {
-		uint8_t i;
-		uint8_t has_bcc = queue_peek(&rs485out_rbuffer, count-2) == DATA_ETX || queue_peek(&rs485out_rbuffer, count-2) == DATA_EOT;
-		for(i=0; i < count; i++) {
-			uint8_t data = queue_peek(&rs485out_rbuffer, i);
-			if (has_bcc && i == (count - 1)) {
-				log_iec_data(data, 1, 1);
-			}
-			else {
-				log_iec_data(data, 1, 0);
-			}
+	uint8_t has_bcc = 0;
+	if (UART1Count > 1) {
+		has_bcc = queue_peek(&rs485out_rbuffer, count-2) == DATA_ETX || queue_peek(&rs485out_rbuffer, count-2) == DATA_EOT;
+	}
+
+	uint8_t i;
+	for(i=0; i < count; i++) {
+		uint8_t data = queue_peek(&rs485out_rbuffer, i);
+		if (has_bcc && i == (count - 1)) {
+			log_iec_data(data, 1, 1);
+		}
+		else {
+			log_iec_data(data, 1, 0);
 		}
 	}
 	logger_logCRLF();
@@ -227,11 +246,14 @@ void iec_disconnect() {
 
 void iec_request_data_at_address(uint8_t address) {
 	if (iec_flag_ready) {
+		logger_logString("request data at address ");
+		logger_logNumberln(address);
 		iec_flag_ready = 0;
 		iec_flag_data_available = 0;
 		iec_flag_error = 0;
 		iec_read_address = address;
 		set_address_string(address);
+		logger_logStringln(read_address_string);
 		iec_send_with_parameter(message_read, read_address_string, 1);
 		iec_current_state = STATE_WAIT_DATA_READ;
 	}
@@ -362,7 +384,7 @@ void process_iec(uint32_t ms_ticks) {
 			// clear RX buffer
 			UART1Count = 0;
 		}
-		else if (math_calc_diff(ms_ticks, UART1LastReceived) > 50 && UART1Count > 0) {
+		else if (math_calc_diff(ms_ticks, UART1LastReceived) > 100 && UART1Count > 0) {
 			// 500ms time out
 
 			iec_flag_reading = 0;

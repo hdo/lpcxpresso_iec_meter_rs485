@@ -97,7 +97,18 @@ int main(void) {
 			led_signal(1, 30, msTicks);
 			if (iec_get_connect_status() == CON_STAT_DISCONNECTED) {
 				iec_connect("001511420144");
+				//iec_connect("");
 			}
+
+			if (iec_get_connect_status() == CON_STAT_CONNECTED) {
+				logger_logStringln("connected!");
+
+				if (iec_is_ready()) {
+					iec_request_data_at_address(0);
+				}
+
+			}
+
 		}
 
 		triggerValue = s0_triggered(1);
