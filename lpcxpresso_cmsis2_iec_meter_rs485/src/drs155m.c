@@ -36,7 +36,7 @@ uint8_t logging_bcc_out = 0;
 uint8_t logging_bcc_in = 0;
 
 uint8_t iec_read_address = 0;
-char read_address_string[10];
+char read_address_string[9];
 uint8_t iec_current_state = 0;
 char* iec_current_meter_id = "";
 uint8_t iec_received_data[DRS155M_MAX_RECEIVE_DATA_LENGTH];
@@ -75,21 +75,19 @@ uint32_t iec_read_data_as_int() {
 }
 
 void set_address_string(uint8_t address) {
+	logger_logStringln("called set_address_string");
+	read_address_string[8] = 0; // null termination
 	uint8_t index;
+
 	// init string
-	for(index = 0; index < 10; index++) {
-		read_address_string[index] = 0;
+	for(index = 0; index < 8; index++) {
+		read_address_string[index] = '0';
 	}
-	read_address_string[0] = '0' ;
-	read_address_string[1] = '0' ;
-	read_address_string[2] = '0' ;
-	read_address_string[3] = '0' ;
-	read_address_string[4] = '0' ;
-	read_address_string[5] = '0' ;
-	read_address_string[6] = '0' ;
-	read_address_string[7] = '0' ;
-	/*
-	for(index = 7; index >= 0; index--) {
+
+	/* WARNING: don't use index >= 0 since index is unsigned!!!
+	 * Since we're are only using uint8_t (255) there should be no problem.
+	 */
+	for(index = 7; index > 0; index--) {
 		if (address > 0) {
 			read_address_string[index] = (address % 10) + '0';
 			address /= 10;
@@ -98,7 +96,8 @@ void set_address_string(uint8_t address) {
 			read_address_string[index] = '0';
 		}
 	}
-	*/
+
+	logger_logStringln(read_address_string);
 }
 
 

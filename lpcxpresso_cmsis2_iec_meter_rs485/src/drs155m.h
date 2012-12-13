@@ -43,6 +43,7 @@ uint32_t iec_read_data_as_int();
 void iec_connect(char* meter_id);
 void iec_disconnect();
 void iec_request_data_at_address(uint8_t address);
+void set_address_string(uint8_t address);
 
 
 
