@@ -35,7 +35,7 @@ uint8_t iec_flag_expect_response = 0;
 uint8_t logging_bcc_out = 0;
 uint8_t logging_bcc_in = 0;
 
-uint8_t iec_read_address = 0;
+uint8_t iec_current_address = 0;
 char read_address_string[9];
 uint8_t iec_current_state = 0;
 char* iec_current_meter_id = "";
@@ -58,20 +58,31 @@ uint8_t iec_get_connect_status() {
 	return iec_connect_status;
 }
 
-char* iec_read_data_as_string() {
+char* iec_get_data_as_string() {
 	return (char*) iec_received_data;
 }
 
-uint32_t iec_read_data_as_int() {
+uint32_t iec_get_data_as_int() {
 	uint32_t value = 0;
 	uint8_t d;
 	char* temp = (char*) iec_received_data;
 	while(*temp) {
 		d = *temp++;
-		value *= 10;
-		value += (d - '0');
+		if (d >= '0' && d <= '9') {
+			value *= 10;
+			value += (d - '0');
+		}
 	}
 	return value;
+}
+
+void iec_clear_data() {
+	iec_flag_data_available = 0;
+	iec_flag_ready = 1;
+}
+
+uint8_t iec_get_current_address(){
+	return iec_current_address;
 }
 
 void set_address_string(uint8_t address) {
@@ -250,7 +261,7 @@ void iec_request_data_at_address(uint8_t address) {
 		iec_flag_ready = 0;
 		iec_flag_data_available = 0;
 		iec_flag_error = 0;
-		iec_read_address = address;
+		iec_current_address = address;
 		set_address_string(address);
 		logger_logStringln(read_address_string);
 		iec_send_with_parameter(message_read, read_address_string, 1);
@@ -306,9 +317,10 @@ void iec_prepare_password_verification() {
 }
 
 void iec_parse_buffer() {
+	logger_logStringln("called iec_parse_buffer");
 
 	// reset receive buffer
-	uint8_t i, isdata, index = 0, d, parseCount = 0;
+	uint8_t i, isdata = 0, index = 0, d, parseCount = 0;
 	for(i=0; i < DRS155M_MAX_RECEIVE_DATA_LENGTH; i++) {
 		iec_received_data[i] = 0; // including null termination
 	}

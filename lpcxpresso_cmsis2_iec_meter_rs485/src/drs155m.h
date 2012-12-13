@@ -38,12 +38,13 @@ uint8_t iec_is_data_available();
 uint8_t iec_is_ready();
 uint8_t iec_is_error_occured();
 uint8_t iec_get_connect_status();
-char* iec_read_data_as_string();
-uint32_t iec_read_data_as_int();
+char* iec_get_data_as_string();
+uint32_t iec_get_data_as_int();
+uint8_t iec_get_current_address();
+void iec_clear_data();
 void iec_connect(char* meter_id);
 void iec_disconnect();
 void iec_request_data_at_address(uint8_t address);
-void set_address_string(uint8_t address);
 
 
 

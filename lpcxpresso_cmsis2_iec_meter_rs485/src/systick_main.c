@@ -15,6 +15,7 @@ __CRP const unsigned int CRP_WORD = CRP_NO_CRP ;
 #include "console_out.h"
 #include "s0_input.h"
 #include "drs155m.h"
+#include "version.h"
 
 volatile uint32_t msTicks; // counter for 1ms SysTicks
 extern volatile unsigned int eint3_count;
@@ -50,14 +51,12 @@ int main(void) {
 	}
 
 	led_init();	// Setup GPIO for LED2
-	led2_on();		// Turn LED2 on
+	led_on(0);		// Turn LED2 on
 	//led_on(0);
 	//led_on(1);
 
 	systick_delay(100);
-	led2_off();
-	systick_delay(100);
-	led2_off();
+	led_off(0);
 
 
 	UARTInit(0, 115200); // baud rate setting
@@ -70,9 +69,14 @@ int main(void) {
 
 	logger_setEnabled(1);
 	logger_logStringln("logger online ...");
+	logger_logString("BUILD ID: ");
+	logger_logStringln(VERSION_BUILD_ID);
 	led_off(7);
 
 	uint8_t iCounter;
+
+	uint8_t request_data_table[] = {0, 1, 2, 3, 4, 10, 31, 32};
+	uint8_t current_data_request_index = 0;
 
 	while(1) {
 
@@ -95,7 +99,6 @@ int main(void) {
 			logger_logString("s0_0:");
 			logger_logNumberln(triggerValue);
 			led_signal(1, 30, msTicks);
-			set_address_string(12);
 			if (iec_get_connect_status() == CON_STAT_DISCONNECTED) {
 				iec_connect("001511420144");
 				//iec_connect("");
@@ -104,15 +107,26 @@ int main(void) {
 			if (iec_get_connect_status() == CON_STAT_CONNECTED) {
 				logger_logStringln("connected!");
 
-				/*
 				if (iec_is_ready()) {
-					iec_request_data_at_address(0);
+					if (current_data_request_index < 8) {
+						iec_request_data_at_address(request_data_table[current_data_request_index++]);
+					}
 				}
-				*/
 
+				if (iec_is_data_available()) {
+					logger_logString("data at address: ");
+					logger_logNumberln(iec_get_current_address());
+					uint32_t data = iec_get_data_as_int();
+					logger_logString("data as int: ");
+					logger_logNumberln(data);
+					logger_logString("data as string: ");
+					logger_logStringln(iec_get_data_as_string());
+					iec_clear_data();
+				}
 			}
 
 		}
+
 
 		triggerValue = s0_triggered(1);
 		if (triggerValue) {
