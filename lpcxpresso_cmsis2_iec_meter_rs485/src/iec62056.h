@@ -1,5 +1,5 @@
-#ifndef DRS155M_H_
-#define DRS155M_H_
+#ifndef IEC62056_H_
+#define IEC62056_H_
 
 #define RS485_OUTPUT_BUFFER_SIZE 64
 
@@ -11,8 +11,8 @@
 #define DATA_NAK 0x15
 #define DATA_NAK 0x15
 
-#define DRS155M_DEFAULT_PASSWORD "00000000"
-#define DRS155M_MAX_RECEIVE_DATA_LENGTH 32
+#define METER_DEFAULT_PASSWORD "00000000"
+#define METER_MAX_RECEIVE_DATA_LENGTH 32
 
 #define STATE_DISCONNECTED 10
 // /YTL:001511420144
@@ -48,4 +48,4 @@ void iec_request_data_at_address(uint8_t address);
 
 
 
-#endif /*DRS155M_H_*/
+#endif /*IEC62056_H_*/

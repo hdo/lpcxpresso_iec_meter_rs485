@@ -1,6 +1,6 @@
 #include "LPC17xx.h"
 #include "math_utils.h"
-#include "drs155m.h"
+#include "iec62056.h"
 #include "uart.h"
 #include "queue.h"
 #include "logger.h"
@@ -10,17 +10,17 @@ extern volatile uint8_t UART1Buffer[BUFSIZE];
 extern volatile uint32_t UART1LastReceived;
 
 // "/?<meter id>!\r\n"
-char message_start[] = {'/', '?', '%', '!', '\r', '\n', 0}; // NULL terminated string
+const char message_start[] = {'/', '?', '%', '!', '\r', '\n', 0}; // NULL terminated string
 // [ACK]0:1
-char message_mode[] = {DATA_ACK, '0', ':', '1', '\r', '\n', 0};
+const char message_mode[] = {DATA_ACK, '0', ':', '1', '\r', '\n', 0};
 //[SOH]P1[STX](00000000)[ETX][BCC 0x61]
-char message_login[] = {DATA_SOH, 'P', '1', DATA_STX, '(', '%', ')', DATA_ETX, 0};
+const char message_login[] = {DATA_SOH, 'P', '1', DATA_STX, '(', '%', ')', DATA_ETX, 0};
 // [SOH]R1[STX]00000000()[ETX][BCC 0x63]
-char message_read[] = {DATA_SOH, 'R', '1', DATA_STX, '%', '(', ')', DATA_ETX, 0};
+const char message_read[] = {DATA_SOH, 'R', '1', DATA_STX, '%', '(', ')', DATA_ETX, 0};
 // [SOH]B0[ETX][BCC 0x71]
-char message_exit[] = {DATA_SOH, 'B', '0', DATA_ETX, 0};
+const char message_exit[] = {DATA_SOH, 'B', '0', DATA_ETX, 0};
 
-uint8_t hex_data[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
+const uint8_t hex_data[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
 uint8_t rs485out_buffer_data[RS485_OUTPUT_BUFFER_SIZE];
 ringbuffer_t rs485out_rbuffer = {.buffer=rs485out_buffer_data, .head=0, .tail=0, .count=0, .size=RS485_OUTPUT_BUFFER_SIZE};
@@ -39,7 +39,7 @@ uint8_t iec_current_address = 0;
 char read_address_string[9];
 uint8_t iec_current_state = 0;
 char* iec_current_meter_id = "";
-uint8_t iec_received_data[DRS155M_MAX_RECEIVE_DATA_LENGTH];
+uint8_t iec_received_data[METER_MAX_RECEIVE_DATA_LENGTH];
 uint32_t iec_last_active = 0;
 
 
@@ -188,7 +188,7 @@ void log_outgoing_data() {
 	logger_logCRLF();
 }
 
-void iec_send(char* data, uint8_t expect_response) {
+void iec_send(const char* data, uint8_t expect_response) {
 	iec_flag_expect_response = expect_response;
 	queue_reset(&rs485out_rbuffer);
 	while (*data) {
@@ -197,7 +197,7 @@ void iec_send(char* data, uint8_t expect_response) {
 	log_outgoing_data();
 }
 
-void iec_send_with_parameter(char* data, char* param, uint8_t expect_response) {
+void iec_send_with_parameter(const char* data, char* param, uint8_t expect_response) {
 	iec_flag_expect_response = expect_response;
 	// also send BCC
 	queue_reset(&rs485out_rbuffer);
@@ -299,7 +299,7 @@ void iec_prepare_send_password() {
 			)
 	{
 		// send password command
-		iec_send_with_parameter(message_login, DRS155M_DEFAULT_PASSWORD, 1);
+		iec_send_with_parameter(message_login, METER_DEFAULT_PASSWORD, 1);
 		iec_current_state = STATE_WAIT_PASSWORD_VERIFICATION;
 	}
 	else {
@@ -322,7 +322,7 @@ void iec_parse_buffer() {
 
 	// reset receive buffer
 	uint8_t i, isdata = 0, index = 0, d, parseCount = 0;
-	for(i=0; i < DRS155M_MAX_RECEIVE_DATA_LENGTH; i++) {
+	for(i=0; i < METER_MAX_RECEIVE_DATA_LENGTH; i++) {
 		iec_received_data[i] = 0; // including null termination
 	}
 
