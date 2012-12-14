@@ -40,6 +40,7 @@ char read_address_string[9];
 uint8_t iec_current_state = 0;
 char* iec_current_meter_id = "";
 uint8_t iec_received_data[DRS155M_MAX_RECEIVE_DATA_LENGTH];
+uint32_t iec_last_active = 0;
 
 
 uint8_t iec_is_data_available() {
@@ -96,7 +97,7 @@ void set_address_string(uint8_t address) {
 	}
 
 	/* WARNING: don't use index >= 0 since index is unsigned!!!
-	 * Since we're are only using uint8_t (255) there should be no problem.
+	 * Since we're are only using uint8_t (255) there should not be no a problem
 	 */
 	for(index = 7; index > 0; index--) {
 		if (address > 0) {
@@ -360,6 +361,7 @@ void process_iec(uint32_t ms_ticks) {
 	UARTUpdateMsTicks(ms_ticks);
 
 	if (queue_dataAvailable(&rs485out_rbuffer) && UARTTXReady(1)) {
+		iec_last_active = ms_ticks;
 		uint8_t index;
 		uint8_t data;
 		// fill transmit FIFO with 14 bytes
@@ -377,15 +379,17 @@ void process_iec(uint32_t ms_ticks) {
 			logger_logStringln("set iec_flag_reading=1");
 			logger_logNumberln(ms_ticks);
 			logger_logNumberln(UART1LastReceived);
+			return;
 		}
 	}
 
 	if (iec_flag_reading) {
 	    if (math_calc_diff(ms_ticks, UART1LastReceived) > 300) {
+	    	iec_last_active = ms_ticks;
 	    	logger_logStringln("entering time out");
 	    	logger_logNumberln(UART1LastReceived);
 	    	logger_logNumberln(ms_ticks);
-			// 1500ms time out
+			// 3000ms time out
 			// send exit message
 	    	iec_send_exit();
 			iec_flag_reading = 0;
@@ -396,7 +400,8 @@ void process_iec(uint32_t ms_ticks) {
 			UART1Count = 0;
 		}
 		else if (math_calc_diff(ms_ticks, UART1LastReceived) > 10 && UART1Count > 0) {
-			// 500ms time out
+			// 100ms time out
+	    	iec_last_active = ms_ticks;
 
 			iec_flag_reading = 0;
 
@@ -421,5 +426,11 @@ void process_iec(uint32_t ms_ticks) {
 			// re-enable RBR
 			LPC_UART1->IER = IER_THRE | IER_RLS | IER_RBR;
 		}
+	}
+
+	// auto disconnect if idle
+	if (iec_connect_status == CON_STAT_CONNECTED && math_calc_diff(ms_ticks, iec_last_active) > 200) {
+		logger_logStringln("disconnecting due idle timeout ...");
+		iec_disconnect();
 	}
 }
