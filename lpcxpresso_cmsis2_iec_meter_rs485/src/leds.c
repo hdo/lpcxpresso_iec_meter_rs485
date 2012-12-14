@@ -144,7 +144,7 @@ void led_signal (uint8_t channel, uint32_t timeout, uint32_t msticks) {
 	}
 }
 
-void process_leds(uint32_t msticks) {
+void led_process(uint32_t msticks) {
 	uint8_t i;
 	for(i=0; i < sizeof(led_array); i++) {
 		if (led_timeout[i] > 0) {

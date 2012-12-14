@@ -29,7 +29,7 @@ void led_all_on ();
 void led_all_off ();
 void led_all_invert ();
 void led_signal (uint8_t channel, uint32_t timeout, uint32_t msticks);
-void process_leds(uint32_t msticks);
+void led_process(uint32_t msticks);
 
 
 

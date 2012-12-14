@@ -18,7 +18,7 @@ void s0_init(void) {
 	// no need to set FIODIR, since INPUT (0) is selected as default
 }
 
-uint32_t read_s0_status() {
+uint32_t s0_read_status() {
 	// we're are using GPIO0 here !!!
 	// note that data is inverted (logic 0 -> 1) since we're are using pull-ups
 	return ~LPC_GPIO0->FIOPIN & (S0_INPUT0 | S0_INPUT1 | S0_INPUT2 | S0_INPUT3 );
@@ -28,7 +28,7 @@ uint32_t read_s0_status() {
 /**
  * process s0 inputs with DEBOUNCE
  */
-void process_s0(uint32_t msticks) {
+void s0_process(uint32_t msticks) {
 	uint8_t i;
 	uint32_t d;
 	for(i = 0; i < s0_input_count; i++) {
@@ -40,7 +40,7 @@ void process_s0(uint32_t msticks) {
 			}
 		}
 	}
-	s0_newState = read_s0_status();
+	s0_newState = s0_read_status();
 	if (s0_newState != s0_oldState) {
 		for(i = 0; i < s0_input_count; i++) {
 			if (s0_newState & s0_inputs[i]) {

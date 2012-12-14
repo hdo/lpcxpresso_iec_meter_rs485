@@ -88,9 +88,9 @@ int main(void) {
 			}
 		}
 
-		process_leds(msTicks);
+		led_process(msTicks);
 
-		process_s0(msTicks);
+		s0_process(msTicks);
 
 		drs155m_process(msTicks);
 
