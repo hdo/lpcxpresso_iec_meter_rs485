@@ -33,7 +33,7 @@
 
 
 void iec_init();
-void process_iec(uint32_t ms_ticks);
+void iec_process(uint32_t ms_ticks);
 uint8_t iec_is_data_available();
 uint8_t iec_is_ready();
 uint8_t iec_is_error_occured();

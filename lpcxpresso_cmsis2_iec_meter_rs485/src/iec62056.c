@@ -357,7 +357,7 @@ void iec_init() {
 	UARTInit(1, 9600);	 // baud rate setting, RS485
 }
 
-void process_iec(uint32_t ms_ticks) {
+void iec_process(uint32_t ms_ticks) {
 	UARTUpdateMsTicks(ms_ticks);
 
 	if (queue_dataAvailable(&rs485out_rbuffer) && UARTTXReady(1)) {
@@ -429,7 +429,7 @@ void process_iec(uint32_t ms_ticks) {
 	}
 
 	// auto disconnect if idle
-	if (iec_connect_status == CON_STAT_CONNECTED && math_calc_diff(ms_ticks, iec_last_active) > 200) {
+	if (iec_connect_status == CON_STAT_CONNECTED && math_calc_diff(ms_ticks, iec_last_active) > 400) {
 		logger_logStringln("disconnecting due idle timeout ...");
 		iec_disconnect();
 	}

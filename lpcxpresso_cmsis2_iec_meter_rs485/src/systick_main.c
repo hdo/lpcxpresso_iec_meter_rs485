@@ -14,7 +14,7 @@ __CRP const unsigned int CRP_WORD = CRP_NO_CRP ;
 #include "logger.h"
 #include "console_out.h"
 #include "s0_input.h"
-#include "iec62056.h"
+#include "drs155m.h"
 #include "version.h"
 
 volatile uint32_t msTicks; // counter for 1ms SysTicks
@@ -65,7 +65,7 @@ int main(void) {
 	UARTSendCRLF(0);
 	UARTSendStringln(0, "UART2 online ...");
 
-	iec_init();
+	drs155m_init();
 
 	logger_setEnabled(1);
 	logger_logStringln("logger online ...");
@@ -75,8 +75,8 @@ int main(void) {
 
 	uint8_t iCounter;
 
-	uint8_t request_data_table[] = {0, 1, 2, 3, 4, 10, 31, 32};
-	uint8_t current_data_request_index = 0;
+	drs155m_t power_meter;
+	power_meter.meter_id = "001511420144";
 
 	while(1) {
 
@@ -92,48 +92,33 @@ int main(void) {
 
 		process_s0(msTicks);
 
-		process_iec(msTicks);
+		drs155m_process(msTicks);
 
 		uint32_t triggerValue = s0_triggered(0);
 		if (triggerValue) {
 			logger_logString("s0_0:");
 			logger_logNumberln(triggerValue);
 			led_signal(1, 30, msTicks);
-			if (iec_get_connect_status() == CON_STAT_DISCONNECTED) {
-				iec_connect("001511420144");
-				//iec_connect("");
-			}
-
-			if (iec_get_connect_status() == CON_STAT_CONNECTED) {
-				logger_logStringln("connected!");
-			}
-
-		}
-
-
-		if (iec_get_connect_status() == CON_STAT_CONNECTED) {
-			if (iec_is_ready()) {
-				if (current_data_request_index < 8) {
-					iec_request_data_at_address(request_data_table[current_data_request_index++]);
-				}
-				else {
-					iec_disconnect();
-					current_data_request_index = 0;
-				}
-			}
-
-			if (iec_is_data_available()) {
-				logger_logString("data at address: ");
-				logger_logNumberln(iec_get_current_address());
-				uint32_t data = iec_get_data_as_int();
-				logger_logString("data as int: ");
-				logger_logNumberln(data);
-				logger_logString("data as string: ");
-				logger_logStringln(iec_get_data_as_string());
-				iec_clear_data();
+			if (drs155m_is_ready()) {
+				drs155m_request_data(&power_meter);
 			}
 		}
 
+		if (drs155m_is_data_available()) {
+			logger_logStringln("Meter data: ");
+			logger_logNumberln(power_meter.voltage);
+			logger_logNumberln(power_meter.ampere);
+			logger_logNumberln(power_meter.frequency);
+			logger_logNumberln(power_meter.active_power);
+			logger_logNumberln(power_meter.reactive_power);
+			logger_logNumberln(power_meter.total_energy);
+			drs155m_reset();
+		}
+
+		if (drs155m_is_error()) {
+			logger_logStringln("error reading meter data");
+			drs155m_reset();
+		}
 
 		triggerValue = s0_triggered(1);
 		if (triggerValue) {
