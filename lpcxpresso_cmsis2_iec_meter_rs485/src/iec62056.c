@@ -87,7 +87,6 @@ uint8_t iec_get_current_address(){
 }
 
 void set_address_string(uint8_t address) {
-	logger_logStringln("called set_address_string");
 	read_address_string[8] = 0; // null termination
 	uint8_t index;
 
@@ -108,8 +107,6 @@ void set_address_string(uint8_t address) {
 			read_address_string[index] = '0';
 		}
 	}
-
-	logger_logStringln(read_address_string);
 }
 
 
@@ -258,7 +255,6 @@ void iec_disconnect() {
 void iec_request_data_at_address(uint8_t address) {
 	if (iec_flag_ready) {
 		logger_logString("request data at address ");
-		logger_logNumberln(address);
 		iec_flag_ready = 0;
 		iec_flag_data_available = 0;
 		iec_flag_error = 0;
@@ -318,8 +314,6 @@ void iec_prepare_password_verification() {
 }
 
 void iec_parse_buffer() {
-	logger_logStringln("called iec_parse_buffer");
-
 	// reset receive buffer
 	uint8_t i, isdata = 0, index = 0, d, parseCount = 0;
 	for(i=0; i < METER_MAX_RECEIVE_DATA_LENGTH; i++) {
@@ -376,19 +370,15 @@ void iec_process(uint32_t ms_ticks) {
 			iec_flag_reading = 1;
 			UART1Count = 0;
 
-			logger_logStringln("set iec_flag_reading=1");
-			logger_logNumberln(ms_ticks);
-			logger_logNumberln(UART1LastReceived);
 			return;
 		}
 	}
 
 	if (iec_flag_reading) {
-	    if (math_calc_diff(ms_ticks, UART1LastReceived) > 300) {
+	    if (math_calc_diff(ms_ticks, UART1LastReceived) > 250) {
 	    	iec_last_active = ms_ticks;
-	    	logger_logStringln("entering time out");
-	    	logger_logNumberln(UART1LastReceived);
-	    	logger_logNumberln(ms_ticks);
+	    	logger_logString("receiver time out: ");
+	    	logger_logNumberln(math_calc_diff(ms_ticks, UART1LastReceived));
 			// 3000ms time out
 			// send exit message
 	    	iec_send_exit();
@@ -399,7 +389,7 @@ void iec_process(uint32_t ms_ticks) {
 			// clear RX buffer
 			UART1Count = 0;
 		}
-		else if (math_calc_diff(ms_ticks, UART1LastReceived) > 10 && UART1Count > 0) {
+		else if (math_calc_diff(ms_ticks, UART1LastReceived) > 5 && UART1Count > 0) {
 			// 100ms time out
 	    	iec_last_active = ms_ticks;
 
@@ -429,7 +419,7 @@ void iec_process(uint32_t ms_ticks) {
 	}
 
 	// auto disconnect if idle
-	if (iec_connect_status == CON_STAT_CONNECTED && math_calc_diff(ms_ticks, iec_last_active) > 400) {
+	if (iec_connect_status == CON_STAT_CONNECTED && math_calc_diff(ms_ticks, iec_last_active) > 300) {
 		logger_logStringln("disconnecting due idle timeout ...");
 		iec_disconnect();
 	}

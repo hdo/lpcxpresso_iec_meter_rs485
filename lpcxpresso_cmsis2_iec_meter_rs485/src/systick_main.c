@@ -112,6 +112,9 @@ int main(void) {
 			logger_logNumberln(power_meter.active_power);
 			logger_logNumberln(power_meter.reactive_power);
 			logger_logNumberln(power_meter.total_energy);
+			logger_logString("operation took ");
+			logger_logNumber(drs155m_get_duration());
+			logger_logStringln(" ticks");
 			drs155m_reset();
 		}
 
