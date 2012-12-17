@@ -194,7 +194,7 @@ void iec_send(const char* data, uint8_t expect_response) {
 	log_outgoing_data();
 }
 
-void iec_send_with_parameter(const char* data, char* param, uint8_t expect_response) {
+void iec_send_with_parameter(const char* data, char* param, uint8_t expect_response, uint8_t send_bcc) {
 	iec_flag_expect_response = expect_response;
 	// also send BCC
 	queue_reset(&rs485out_rbuffer);
@@ -221,8 +221,10 @@ void iec_send_with_parameter(const char* data, char* param, uint8_t expect_respo
 		// skip first byte for bcc calculation
 		start_bcc = 1;
 	}
-	// send BCC
-	queue_put(&rs485out_rbuffer, bcc);
+	if (send_bcc) {
+		// send BCC
+		queue_put(&rs485out_rbuffer, bcc);
+	}
 	log_outgoing_data();
 }
 
@@ -239,7 +241,7 @@ void iec_send_exit() {
 void iec_connect(char* meter_id) {
 	if (iec_connect_status == CON_STAT_DISCONNECTED) {
 		// send start
-		iec_send_with_parameter(message_start, meter_id, 1);
+		iec_send_with_parameter(message_start, meter_id, 1, 0);
 		iec_current_state = STATE_WAIT_IDENTIFICATION;
 		iec_connect_status = CON_STAT_CONNECTING;
 		logger_logStringln("done sending start command");
@@ -261,7 +263,7 @@ void iec_request_data_at_address(uint8_t address) {
 		iec_current_address = address;
 		set_address_string(address);
 		logger_logStringln(read_address_string);
-		iec_send_with_parameter(message_read, read_address_string, 1);
+		iec_send_with_parameter(message_read, read_address_string, 1, 1);
 		iec_current_state = STATE_WAIT_DATA_READ;
 	}
 }
@@ -295,7 +297,7 @@ void iec_prepare_send_password() {
 			)
 	{
 		// send password command
-		iec_send_with_parameter(message_login, METER_DEFAULT_PASSWORD, 1);
+		iec_send_with_parameter(message_login, METER_DEFAULT_PASSWORD, 1, 1);
 		iec_current_state = STATE_WAIT_PASSWORD_VERIFICATION;
 	}
 	else {
@@ -375,7 +377,7 @@ void iec_process(uint32_t ms_ticks) {
 	}
 
 	if (iec_flag_reading) {
-	    if (math_calc_diff(ms_ticks, UART1LastReceived) > 250) {
+	    if (math_calc_diff(ms_ticks, UART1LastReceived) > IEC_WAIT_FOR_DATA_TIME_OUT) {
 	    	iec_last_active = ms_ticks;
 	    	logger_logString("receiver time out: ");
 	    	logger_logNumberln(math_calc_diff(ms_ticks, UART1LastReceived));
@@ -389,7 +391,7 @@ void iec_process(uint32_t ms_ticks) {
 			// clear RX buffer
 			UART1Count = 0;
 		}
-		else if (math_calc_diff(ms_ticks, UART1LastReceived) > 5 && UART1Count > 0) {
+		else if (math_calc_diff(ms_ticks, UART1LastReceived) > IEC_BUFFER_FILL_IN_TIME_OUT && UART1Count > 0) {
 			// 100ms time out
 	    	iec_last_active = ms_ticks;
 
@@ -419,7 +421,7 @@ void iec_process(uint32_t ms_ticks) {
 	}
 
 	// auto disconnect if idle
-	if (iec_connect_status == CON_STAT_CONNECTED && math_calc_diff(ms_ticks, iec_last_active) > 300) {
+	if (iec_connect_status == CON_STAT_CONNECTED && math_calc_diff(ms_ticks, iec_last_active) > IEC_IDLE_TIME_OUT) {
 		logger_logStringln("disconnecting due idle timeout ...");
 		iec_disconnect();
 	}
