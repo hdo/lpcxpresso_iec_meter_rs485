@@ -3,7 +3,7 @@
 #include "console_out.h"
 #include <stdlib.h>
 
-uint8_t logger_enabled = 0;
+uint8_t logger_enabled = 1;
 
 /**
  * expected zero terminated string
