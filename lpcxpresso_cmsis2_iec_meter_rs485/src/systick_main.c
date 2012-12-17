@@ -106,7 +106,7 @@ int main(void) {
 			logger_logNumberln(triggerValue);
 			led_signal(1, 30, msTicks);
 			if (drs155m_is_ready()) {
-				current_power_meter = power_meters[current_meter_index];
+				current_power_meter = &power_meters[current_meter_index];
 				drs155m_request_data(current_power_meter);
 				current_meter_index++;
 				if (current_meter_index >= 3) {
