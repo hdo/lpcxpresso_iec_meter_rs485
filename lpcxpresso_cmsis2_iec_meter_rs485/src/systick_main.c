@@ -75,8 +75,14 @@ int main(void) {
 
 	uint8_t iCounter;
 
-	drs155m_t power_meter;
-	power_meter.meter_id = "001511420144";
+	uint8_t current_meter_index = 0;
+
+	drs155m_t power_meters[3];
+	power_meters[0].meter_id = "001511420141";
+	power_meters[1].meter_id = "001511420142";
+	power_meters[2].meter_id = "001511420143";
+
+	drs155m_t* current_power_meter = &power_meters[2];
 
 	while(1) {
 
@@ -100,18 +106,23 @@ int main(void) {
 			logger_logNumberln(triggerValue);
 			led_signal(1, 30, msTicks);
 			if (drs155m_is_ready()) {
-				drs155m_request_data(&power_meter);
+				current_power_meter = power_meters[current_meter_index];
+				drs155m_request_data(current_power_meter);
+				current_meter_index++;
+				if (current_meter_index >= 3) {
+					current_meter_index = 0;
+				}
 			}
 		}
 
 		if (drs155m_is_data_available()) {
 			logger_logStringln("Meter data: ");
-			logger_logNumberln(power_meter.voltage);
-			logger_logNumberln(power_meter.ampere);
-			logger_logNumberln(power_meter.frequency);
-			logger_logNumberln(power_meter.active_power);
-			logger_logNumberln(power_meter.reactive_power);
-			logger_logNumberln(power_meter.total_energy);
+			logger_logNumberln(current_power_meter->voltage);
+			logger_logNumberln(current_power_meter->ampere);
+			logger_logNumberln(current_power_meter->frequency);
+			logger_logNumberln(current_power_meter->active_power);
+			logger_logNumberln(current_power_meter->reactive_power);
+			logger_logNumberln(current_power_meter->total_energy);
 			logger_logString("operation took ");
 			logger_logNumber(drs155m_get_duration());
 			logger_logStringln(" ticks");
