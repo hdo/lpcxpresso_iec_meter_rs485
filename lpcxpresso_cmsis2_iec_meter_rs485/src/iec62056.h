@@ -32,7 +32,7 @@
 
 
 #define IEC_WAIT_FOR_DATA_TIME_OUT 300     // 200 ms ticks == 2000ms
-#define IEC_BUFFER_FILL_IN_TIME_OUT 2 //
+#define IEC_BUFFER_FILL_IN_TIME_OUT 3 //
 #define IEC_IDLE_TIME_OUT 350         //
 
 void iec_init();
