@@ -454,7 +454,7 @@ uint32_t UARTInit( uint8_t PortNum, uint32_t baudrate )
 #else
     LPC_UART1->RS485CTRL = 1 << 3 | 1 << 4 | 1 << 5;
 #endif
-
+    LPC_UART1->RS485DLY = 0x05;
 
    	NVIC_EnableIRQ(UART1_IRQn);
 
