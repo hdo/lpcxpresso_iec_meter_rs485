@@ -4,8 +4,9 @@
 #include "math_utils.h"
 
 // array of addresses to be read from meter
-const uint8_t address_list[] = {0, 1, 2, 3, 4, 10};
+//const uint8_t address_list[] = {0, 1, 2, 3, 4, 10};
 //const uint8_t address_list[] = {3, 4, 10};
+const uint8_t address_list[] = {3, 10};
 
 #define ADDRESS_LIST_COUNT sizeof(address_list)/sizeof(uint8_t)
 
