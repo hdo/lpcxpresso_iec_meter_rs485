@@ -18,7 +18,7 @@ const char message_login[] = {DATA_SOH, 'P', '1', DATA_STX, '(', '%', ')', DATA_
 // [SOH]R1[STX]00000000()[ETX][BCC 0x63]
 const char message_read[] = {DATA_SOH, 'R', '1', DATA_STX, '%', '(', ')', DATA_ETX, 0};
 // [SOH]B0[ETX][BCC 0x71]
-const char message_exit[] = {DATA_SOH, 'B', '0', DATA_ETX, 0};
+const char message_exit[] = {DATA_SOH, 'B', '0', DATA_ETX, 0x71, 0};
 
 const uint8_t hex_data[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
@@ -411,6 +411,7 @@ void iec_process(uint32_t ms_ticks) {
 			case STATE_WAIT_DATA_READ : iec_parse_buffer(); break;
 			default: break;
 			}
+
 
 			// clear RX buffer
 			UART1Count = 0;
