@@ -31,9 +31,10 @@
 #define CON_STAT_DISCONNECTED 4
 
 
-#define IEC_WAIT_FOR_DATA_TIME_OUT 300     // 200 ms ticks == 2000ms
-#define IEC_BUFFER_FILL_IN_TIME_OUT 3 //
-#define IEC_IDLE_TIME_OUT 350         //
+#define IEC_WAIT_FOR_DATA_TIME_OUT 150     // 150 ms ticks == 1500ms, see IEC62056-21
+#define IEC_BUFFER_FILL_IN_TIME_OUT 5 //
+#define IEC_IDLE_TIME_OUT 200         //
+#define IEC_RETRY_COUNT 3
 
 void iec_init();
 void iec_process(uint32_t ms_ticks);
