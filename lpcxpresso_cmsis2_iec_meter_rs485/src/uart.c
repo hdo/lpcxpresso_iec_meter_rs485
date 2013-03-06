@@ -392,6 +392,10 @@ uint32_t UARTInit( uint8_t PortNum, uint32_t baudrate )
   else if ( PortNum == 1 )
   {
 
+
+    /* disable pull up */
+  	LPC_PINCON->PINMODE1 |= 0b10 << 0;
+
 	// set TXD1 function //
     LPC_PINCON->PINSEL0	&= (~(0b11 << 30));
     LPC_PINCON->PINSEL0	|= (0b01 << 30);
@@ -454,7 +458,7 @@ uint32_t UARTInit( uint8_t PortNum, uint32_t baudrate )
 #else
     LPC_UART1->RS485CTRL = 1 << 3 | 1 << 4 | 1 << 5;
 #endif
-    LPC_UART1->RS485DLY = 0x05;
+    LPC_UART1->RS485DLY = 0x02;
 
    	NVIC_EnableIRQ(UART1_IRQn);
 
