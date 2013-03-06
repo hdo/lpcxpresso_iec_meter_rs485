@@ -16,6 +16,7 @@ __CRP const unsigned int CRP_WORD = CRP_NO_CRP ;
 #include "s0_input.h"
 #include "drs155m.h"
 #include "version.h"
+#include "math_utils.h"
 
 volatile uint32_t msTicks; // counter for 1ms SysTicks
 extern volatile unsigned int eint3_count;
@@ -73,21 +74,31 @@ int main(void) {
 	logger_logStringln(VERSION_BUILD_ID);
 	led_off(7);
 
-	uint8_t iCounter;
+	uint16_t loop_count = 0;
+	uint8_t do_start = 0;
+
+#define METER_COUNT 4
+
+	uint8_t error_count[METER_COUNT] = {0,0,0};
 
 	uint8_t current_meter_index = 0;
 
-	drs155m_t power_meters[3];
+
+	drs155m_t power_meters[METER_COUNT];
 	power_meters[0].meter_id = "001511420141";
 	power_meters[1].meter_id = "001511420142";
 	power_meters[2].meter_id = "001511420143";
+	power_meters[3].meter_id = "001511420149";
 
-	drs155m_t* current_power_meter = &power_meters[2];
+	drs155m_t* current_power_meter = &power_meters[0];
+
+	uint32_t delay_value = 0;
 
 	while(1) {
 
 		/* process logger */
 		if (console_out_dataAvailable() && UARTTXReady(0)) {
+			uint8_t iCounter;
 			// fill transmit FIFO with 14 bytes
 			for(iCounter = 0; iCounter < 14 && console_out_dataAvailable(); iCounter++) {
 				UARTSendByte(0, console_out_read());
@@ -105,14 +116,22 @@ int main(void) {
 			logger_logString("s0_0:");
 			logger_logNumberln(triggerValue);
 			led_signal(1, 30, msTicks);
-			if (drs155m_is_ready()) {
-				current_power_meter = &power_meters[current_meter_index];
-				drs155m_request_data(current_power_meter);
-				current_meter_index++;
-				if (current_meter_index >= 3) {
-					current_meter_index = 0;
-				}
+			if (do_start) {
+				do_start = 0;
 			}
+			else {
+				do_start = 1;
+			}
+		}
+
+		if (drs155m_is_ready() && do_start && math_calc_diff(msTicks, delay_value) > 20) {
+			loop_count++;
+			current_meter_index++;
+			if (current_meter_index >= METER_COUNT) {
+				current_meter_index = 0;
+			}
+			current_power_meter = &power_meters[current_meter_index];
+			drs155m_request_data(current_power_meter);
 		}
 
 		if (drs155m_is_data_available()) {
@@ -126,12 +145,25 @@ int main(void) {
 			logger_logString("operation took ");
 			logger_logNumber(drs155m_get_duration());
 			logger_logStringln(" ticks");
+			logger_logString("current loop: ");
+			logger_logNumberln(loop_count);
+			logger_logString("error count 0: ");
+			logger_logNumberln(error_count[0]);
+			logger_logString("error count 1: ");
+			logger_logNumberln(error_count[1]);
+			logger_logString("error count 2: ");
+			logger_logNumberln(error_count[2]);
+			logger_logString("error count 3: ");
+			logger_logNumberln(error_count[3]);
 			drs155m_reset();
+			delay_value = msTicks;
 		}
 
 		if (drs155m_is_error()) {
 			logger_logStringln("error reading meter data");
+			error_count[current_meter_index]++;
 			drs155m_reset();
+			delay_value = msTicks;
 		}
 
 		triggerValue = s0_triggered(1);
